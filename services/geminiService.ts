@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel } from "../types";
+import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel, VoiceProfile } from "../types";
 
 export const askAiQuestion = async (question: string, scorecard: ScorecardCriterion[]): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -25,6 +25,34 @@ Responda de forma executiva, profissional e encorajadora.`;
   return response.text || "Jammin está indisponível no momento.";
 };
 
+export const analyzeUserVoice = async (audioBase64: string): Promise<VoiceProfile> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-native-audio-preview-09-2025",
+    contents: {
+      parts: [
+        { inlineData: { data: audioBase64, mimeType: 'audio/wav' } },
+        { text: "Analise a tonalidade, energia e cadência desta voz. Determine se a voz soa mais como um locutor masculino ou feminino. Selecione qual destes nomes de voz pré-definidos soaria mais parecido em um podcast: Puck (juvenil/enérgico/masculino), Charon (profundo/calmo/masculino), Kore (feminino/claro), Fenrir (masculino/robusto), Zephyr (neutro/profissional). Retorne APENAS o nome e uma breve descrição do tom em formato JSON." }
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          voiceName: { type: Type.STRING },
+          tonalityDescription: { type: Type.STRING }
+        },
+        required: ["voiceName", "tonalityDescription"]
+      }
+    }
+  });
+
+  const res = JSON.parse(response.text || '{"voiceName":"Zephyr", "tonalityDescription": "Profissional Padrão"}');
+  return res as VoiceProfile;
+};
+
 export const analyzeInteraction = async (
   transcript: string,
   monitorName: string,
@@ -38,24 +66,27 @@ export const analyzeInteraction = async (
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const scorecardText = scorecard.map(c => 
-    `ID:[${c.id}] | CATEGORIA:${c.category} | NOME:${c.name} | PESO:${c.weight}pts | REGRA:${c.description}`
+    `ID:[${c.id}] | NOME:${c.name} | REGRA:${c.description} | PESO:${c.weight}pts`
   ).join('\n');
 
   const ncgText = ncgItems.map(n => `- ${n.name}: ${n.description}`).join('\n');
 
   const systemInstruction = `
-### 🚨 MOTOR DE AUDITORIA JAMMIN v11.5 🚨
-Você é uma auditora sênior imparcial. Sua missão é analisar interações de suporte e aplicar a Ficha de Monitoria v1.1.2025.
+### MOTOR DE AUDITORIA JAMMIN v12.0
+Você é uma auditora sênior. Sua missão é analisar interações de suporte com base no scorecard abaixo.
 
-### REGRAS DE OURO:
-1. "criteriaScores": Você DEVE avaliar individualmente CADA ID do SCORECARD.
-2. "observation": Para CADA item, escreva uma justificativa técnica (Ex: "O agente demonstrou empatia ao validar o sentimento do cliente no minuto X" ou "Não houve saudação conforme script").
-3. Se um NCG (Tolerância Zero) ocorrer, o "totalScore" deve ser 0 obrigatoriamente.
+### REGRAS PARA JUSTIFICATIVA (Obrigatório):
+Para CADA item do scorecard, você deve fornecer uma observação que cite:
+1. A regra original do scorecard.
+2. O comportamento observado (exatamente o que o agente disse ou fez).
+3. A razão técnica para a pontuação.
+
+Exemplo: "No item 4.1 (Empatia), o agente foi CONFORME pois demonstrou interesse genuíno ao dizer 'Sinto muito pelo ocorrido' após o relato do cliente."
 
 SCORECARD:
 ${scorecardText}
 
-NCGs:
+NCGs (Anulam score se ocorrerem):
 ${ncgText}
 
 Responda EXCLUSIVAMENTE em JSON.`;
@@ -111,9 +142,23 @@ Responda EXCLUSIVAMENTE em JSON.`;
   };
 };
 
-export const generateAudioPodcastFeedback = async (result: AnalysisResult, agentName: string, monitorName: string): Promise<string> => {
+export const generateAudioPodcastFeedback = async (
+  result: AnalysisResult, 
+  agentName: string, 
+  monitorName: string,
+  voiceProfile?: VoiceProfile
+): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Jammin (Voice Puck): Fala galera! Jammin aqui. Vamos analisar o atendimento do(a) ${agentName} auditado por ${monitorName}. Nota final: ${result.totalScore}. Destaque: ${result.operatorFeedback}.`;
+  
+  const voice = voiceProfile?.voiceName || 'Zephyr';
+  const tonality = voiceProfile?.tonalityDescription || 'Profissional e direto';
+
+  // Improved prompt to handle Portuguese grammar (gender articles) correctly
+  const prompt = `Gere o texto de locução em áudio seguindo estas instruções rigorosas:
+1. Você é o(a) monitor(a) ${monitorName}.
+2. Use os artigos definidos corretos em português (o/a) de acordo com o gênero do nome ${monitorName}. Se for Francisca, diga 'aqui é A Francisca'. Se for Waldir, diga 'aqui é O Waldir'.
+3. O tom de voz deve ser: ${tonality}.
+4. Script: 'Fala pessoal, aqui é ${monitorName}! Acabei de analisar o atendimento do agente ${agentName}. O score final foi de ${result.totalScore} pontos. O principal ponto de melhoria ou destaque é: ${result.operatorFeedback}. É isso aí, vamos focar nos detalhes para a próxima. Valeu!'`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
@@ -121,10 +166,16 @@ export const generateAudioPodcastFeedback = async (result: AnalysisResult, agent
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName: voice }
+        },
       },
     },
   });
 
-  return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (!base64Audio) {
+    throw new Error("A API de TTS não retornou dados de áudio.");
+  }
+  return base64Audio;
 };

@@ -7,13 +7,14 @@ import AiConsultant from './components/AiConsultant';
 import History from './components/History';
 import ScorecardManager from './components/ScorecardManager';
 import Help from './components/Help';
-import { Interaction, AnalysisResult, ScorecardCriterion, NcgItem } from './types';
+import { Interaction, AnalysisResult, ScorecardCriterion, NcgItem, VoiceProfile } from './types';
 import { DEFAULT_SCORECARD } from './constants';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [scorecard, setScorecard] = useState<ScorecardCriterion[]>([]);
   const [ncgItems, setNcgItems] = useState<NcgItem[]>([
@@ -29,14 +30,14 @@ const App: React.FC = () => {
     const savedPhoto = localStorage.getItem('waldir_user_photo');
     if (savedPhoto) setUserPhoto(savedPhoto);
 
+    const savedVoice = localStorage.getItem('waldir_voice_profile');
+    if (savedVoice) setVoiceProfile(JSON.parse(savedVoice));
+
     const savedInteractions = localStorage.getItem('waldir_interactions');
     if (savedInteractions) setInteractions(JSON.parse(savedInteractions));
 
     const savedScorecard = localStorage.getItem('waldir_scorecard');
     setScorecard(savedScorecard ? JSON.parse(savedScorecard) : DEFAULT_SCORECARD);
-
-    const savedNcgs = localStorage.getItem('waldir_ncgs');
-    if (savedNcgs) setNcgItems(JSON.parse(savedNcgs));
   }, []);
 
   useEffect(() => {
@@ -47,6 +48,11 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  const handleVoiceCalibrated = (profile: VoiceProfile) => {
+    setVoiceProfile(profile);
+    localStorage.setItem('waldir_voice_profile', JSON.stringify(profile));
+  };
 
   const handleUpdatePhoto = (base64: string) => {
     setUserPhoto(base64);
@@ -77,6 +83,8 @@ const App: React.FC = () => {
         toggleTheme={toggleTheme}
         userPhoto={userPhoto}
         onUpdatePhoto={handleUpdatePhoto}
+        voiceProfile={voiceProfile}
+        onVoiceCalibrated={handleVoiceCalibrated}
       />
       
       <main className="flex-1 ml-64 p-8 lg:p-12 max-w-7xl mx-auto w-full relative z-10">
@@ -84,7 +92,7 @@ const App: React.FC = () => {
           <div>
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-1 bg-[#2cb638] rounded-full shadow-[0_0_15px_rgba(44,182,56,0.3)]"></div>
-              <p className="text-[#124b94] dark:text-[#2cb638] text-[10px] font-black uppercase tracking-[0.4em]">Jammin Studio Engine</p>
+              <p className="text-[#124b94] dark:text-[#2cb638] text-[10px] font-black uppercase tracking-[0.4em]">Jammin Studio v12.0</p>
             </div>
             <h2 className={`text-5xl font-black tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-[#042147]'}`}>
               {activeTab === 'dashboard' && 'Visão Executiva'}
@@ -95,17 +103,17 @@ const App: React.FC = () => {
               {activeTab === 'help' && 'Suporte'}
             </h2>
           </div>
-          <div className="flex items-center space-x-4">
-             <div className={`px-6 py-3 rounded-2xl text-[10px] font-black border flex items-center shadow-xl backdrop-blur-md transition-all duration-500 ${theme === 'dark' ? 'bg-[#1e293b]/80 border-white/10 text-[#2cb638]' : 'bg-white/70 border-white text-[#124b94]'}`}>
-               <span className="w-2.5 h-2.5 bg-[#2cb638] rounded-full mr-3 shadow-[0_0_10px_#2cb638] animate-pulse"></span>
-               STUDIO ONLINE
-             </div>
-          </div>
+          {voiceProfile && (
+            <div className="px-4 py-2 bg-[#2cb638]/10 border border-[#2cb638]/20 rounded-2xl flex items-center">
+              <span className="w-2 h-2 bg-[#2cb638] rounded-full mr-3 animate-pulse"></span>
+              <p className="text-[9px] font-black text-[#2cb638] uppercase tracking-widest">Voz Calibrada: {voiceProfile.voiceName}</p>
+            </div>
+          )}
         </header>
 
         <div className="relative animate-slideUp z-20">
           {activeTab === 'dashboard' && <Dashboard interactions={interactions} scorecard={scorecard} />}
-          {activeTab === 'analyze' && <AnalysisTool onSave={handleSaveInteraction} scorecard={scorecard} ncgItems={ncgItems} />}
+          {activeTab === 'analyze' && <AnalysisTool onSave={handleSaveInteraction} scorecard={scorecard} ncgItems={ncgItems} voiceProfile={voiceProfile} />}
           {activeTab === 'aiconsultant' && <AiConsultant scorecard={scorecard} />}
           {activeTab === 'history' && <History interactions={interactions} />}
           {activeTab === 'scorecard' && <ScorecardManager scorecard={scorecard} setScorecard={setScorecard} ncgItems={ncgItems} setNcgItems={setNcgItems} />}

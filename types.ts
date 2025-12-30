@@ -45,3 +45,8 @@ export interface Interaction {
   transcript: string;
   result?: AnalysisResult;
 }
+
+export interface VoiceProfile {
+  voiceName: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr';
+  tonalityDescription: string;
+}
