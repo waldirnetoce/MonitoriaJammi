@@ -6,12 +6,12 @@ export const askAiQuestion = async (question: string, scorecard: ScorecardCriter
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const scorecardText = scorecard.map(c => `- ${c.name}: ${c.description} (${c.weight}pts)`).join('\n');
 
-  const systemInstruction = `Você é Neo, o consultor sênior de qualidade da operação Neo & Jammin QA.
+  const systemInstruction = `Você é Jammin, a consultora sênior de qualidade da operação Jammin QA.
 Seu objetivo é auxiliar analistas e monitores em dúvidas sobre procedimentos, regras do Scorecard v1.1.2025 e melhores práticas de atendimento.
 Contexto do Scorecard atual:
 ${scorecardText}
 
-Responda de forma executiva, profissional e encorajadora. Se a dúvida for sobre uma nota específica, explique a lógica por trás da Ficha de Monitoria (Receptivo) v1.1.2025.`;
+Responda de forma executiva, profissional e encorajadora.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -22,7 +22,7 @@ Responda de forma executiva, profissional e encorajadora. Se a dúvida for sobre
     }
   });
 
-  return response.text || "Desculpe, Neo e Jammin estão ocupados no estúdio no momento. Tente novamente em breve.";
+  return response.text || "Jammin está indisponível no momento.";
 };
 
 export const analyzeInteraction = async (
@@ -44,25 +44,24 @@ export const analyzeInteraction = async (
   const ncgText = ncgItems.map(n => `- ${n.name}: ${n.description}`).join('\n');
 
   const systemInstruction = `
-### 🚨 MOTOR DE AUDITORIA v11.5 - OPERAÇÃO NEO & JAMMIN 🚨
-Você é um auditor sênior. Sua análise DEVE seguir rigorosamente os pesos e critérios da Ficha fornecida abaixo.
+### 🚨 MOTOR DE AUDITORIA JAMMIN v11.5 🚨
+Você é uma auditora sênior imparcial. Sua missão é analisar interações de suporte e aplicar a Ficha de Monitoria v1.1.2025.
 
-### MONITOR RESPONSÁVEL:
-Nome: ${monitorName}
+### REGRAS DE OURO:
+1. "criteriaScores": Você DEVE avaliar individualmente CADA ID do SCORECARD.
+2. "observation": Para CADA item, escreva uma justificativa técnica (Ex: "O agente demonstrou empatia ao validar o sentimento do cliente no minuto X" ou "Não houve saudação conforme script").
+3. Se um NCG (Tolerância Zero) ocorrer, o "totalScore" deve ser 0 obrigatoriamente.
 
-### CRITÉRIOS DE AVALIAÇÃO (SCORECARD):
+SCORECARD:
 ${scorecardText}
 
-### REGRAS DE TOLERÂNCIA ZERO (NCGs):
+NCGs:
 ${ncgText}
 
-### REGRAS PARA O RESULTADO:
-1. "totalScore": Calcule a soma baseada nos pontos ganhos de cada item. Se um NCG for detectado, o score é obrigatoriamente 0.
-2. "criteriaScores": Para cada item que não atingiu a pontuação máxima, escreva uma justificativa técnica clara no campo "observation", citando o que o agente deixou de cumprir conforme a regra da Ficha v1.1.2025.
-3. Responda apenas com JSON.`;
+Responda EXCLUSIVAMENTE em JSON.`;
 
   const parts: any[] = [
-    { text: `TRANSCRIPÇÃO PARA ANÁLISE:\n${transcript || "Analise pelo áudio fornecido."}\nOPERAÇÃO: ${company}\nAGENTE: ${metadata.agentName}\nRIGOR APLICADO: ${rigor}` }
+    { text: `ANÁLISE PARA: ${metadata.agentName}\nOPERAÇÃO: ${company}\nTRANSCRIPÇÃO:\n${transcript}` }
   ];
 
   if (audioData) {
@@ -70,7 +69,7 @@ ${ncgText}
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
+    model: rigor === 'EXPERT' ? "gemini-3-pro-preview" : "gemini-3-flash-preview",
     contents: { parts },
     config: {
       systemInstruction,
@@ -114,15 +113,7 @@ ${ncgText}
 
 export const generateAudioPodcastFeedback = async (result: AnalysisResult, agentName: string, monitorName: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const prompt = `Gere um diálogo profissional em português para o podcast "Deep Dive: Neo & Jammin".
-  Personagens: Neo (Voz Masculina), Jammin (Voz Feminina).
-  
-  Neo (Voice Kore): Fala galera! Neo aqui começando mais um episódio do Deep Dive Podcast junto com a minha parceira Jammin. Hoje vamos dissecar a monitoria que o monitor ${monitorName} preparou para o atendimento do agente ${agentName}. Jammin, o monitor ${monitorName} deu uma nota de ${result.totalScore} pontos. O que você achou dos pontos de atenção?
-  Jammin (Voice Puck): Oi Neo! Prazer falar desse caso com você. Olha, analisando o que o ${monitorName} pontuou, fica muito claro que o ${agentName} precisa focar no seguinte ponto: "${result.operatorFeedback}". 
-  Neo: Perfeito, Jammin. É uma análise técnica muito bem feita pelo ${monitorName}. O ${agentName} tem agora um PDI claro para seguir e melhorar essa performance.
-  Jammin: Com certeza, Neo. O monitor ${monitorName} deu o caminho. Agora é aplicar as melhorias e buscar o 100 na próxima! Valeu pessoal!
-  Neo: Valeu Jammin, valeu galera! Até a próxima!`;
+  const prompt = `Jammin (Voice Puck): Fala galera! Jammin aqui. Vamos analisar o atendimento do(a) ${agentName} auditado por ${monitorName}. Nota final: ${result.totalScore}. Destaque: ${result.operatorFeedback}.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
@@ -130,23 +121,10 @@ export const generateAudioPodcastFeedback = async (result: AnalysisResult, agent
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
-        multiSpeakerVoiceConfig: {
-          speakerVoiceConfigs: [
-            {
-              speaker: 'Neo',
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
-            },
-            {
-              speaker: 'Jammin',
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } }
-            }
-          ]
-        }
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
       },
     },
   });
 
-  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!base64Audio) throw new Error("Falha no estúdio Neo & Jammin.");
-  return base64Audio;
+  return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
 };

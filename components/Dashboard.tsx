@@ -113,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ interactions, scorecard }) => {
           <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#2cb638]/10 blur-3xl rounded-full"></div>
           <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Auditorias Consolidadas</p>
           <h3 className="text-[80px] font-black mt-4 tracking-tighter leading-none">{stats.total}</h3>
-          <p className="text-[9px] font-black uppercase text-[#2cb638] mt-4 tracking-widest">Base de Dados Neo & Jammin</p>
+          <p className="text-[9px] font-black uppercase text-[#2cb638] mt-4 tracking-widest">Base de Dados Jammin</p>
         </div>
 
         <div className="bg-white dark:bg-[#1a2333] p-10 rounded-[48px] shadow-sm border border-slate-100 dark:border-white/5 flex flex-col items-center">

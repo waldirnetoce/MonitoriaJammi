@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, theme, toggl
           </div>
         </div>
         <div className="text-center">
-          <h1 className="text-sm font-black tracking-[0.2em] text-white uppercase">Neo & Jammin</h1>
+          <h1 className="text-sm font-black tracking-[0.2em] text-white uppercase">Jammin</h1>
           <p className="text-[8px] text-[#2cb638] uppercase font-black tracking-[0.3em] leading-none mt-2">Nível Supervisor</p>
         </div>
       </div>

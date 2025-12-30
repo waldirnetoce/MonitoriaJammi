@@ -84,7 +84,7 @@ const App: React.FC = () => {
           <div>
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-10 h-1 bg-[#2cb638] rounded-full shadow-[0_0_15px_rgba(44,182,56,0.3)]"></div>
-              <p className="text-[#124b94] dark:text-[#2cb638] text-[10px] font-black uppercase tracking-[0.4em]">Neo & Jammin Studio Engine</p>
+              <p className="text-[#124b94] dark:text-[#2cb638] text-[10px] font-black uppercase tracking-[0.4em]">Jammin Studio Engine</p>
             </div>
             <h2 className={`text-5xl font-black tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-[#042147]'}`}>
               {activeTab === 'dashboard' && 'Visão Executiva'}

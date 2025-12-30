@@ -25,7 +25,7 @@ const Help: React.FC = () => {
         </div>
         <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase mb-4">Manual do Usuário</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-2xl">
-          Bem-vindo à documentação oficial da <strong>Neo & Jammin QA</strong>. Aqui você encontrará os guias de operação e implantação técnica.
+          Bem-vindo à documentação oficial da <strong>Jammin QA</strong>. Aqui você encontrará os guias de operação e implantação técnica.
         </p>
       </section>
 
@@ -34,7 +34,7 @@ const Help: React.FC = () => {
           <h3 className="text-xs font-black text-[#2cb638] uppercase tracking-[0.2em] ml-2">Fluxo Operacional</h3>
           <div className="bg-white dark:bg-[#151D2C] p-8 rounded-[32px] border border-slate-100 dark:border-[#243144] space-y-4 text-xs">
             <p className="flex items-center space-x-2"><span className="w-1.5 h-1.5 bg-[#2cb638] rounded-full"></span> <span>Entrada de Transcrição ou Áudio.</span></p>
-            <p className="flex items-center space-x-2"><span className="w-1.5 h-1.5 bg-[#2cb638] rounded-full"></span> <span>Aplicação do Scorecard Neo & Jammin.</span></p>
+            <p className="flex items-center space-x-2"><span className="w-1.5 h-1.5 bg-[#2cb638] rounded-full"></span> <span>Aplicação do Scorecard Jammin.</span></p>
             <p className="flex items-center space-x-2"><span className="w-1.5 h-1.5 bg-[#2cb638] rounded-full"></span> <span>Geração de Feedback v1.1.2025.</span></p>
           </div>
         </div>
@@ -83,7 +83,7 @@ const Help: React.FC = () => {
                 <div className="space-y-4 text-white/70">
                   <p className="text-white/40"># Linux (Ubuntu/Debian)</p>
                   <p>sudo apt update && sudo apt install nodejs npm pm2 -y</p>
-                  <p>npm run build && pm2 start npm --name "neo-jammin" -- start</p>
+                  <p>npm run build && pm2 start npm --name "jammin-qa" -- start</p>
                   <p className="text-white/40 mt-4"># Windows Server</p>
                   <p>Instalar Node.js LTS, extrair arquivos e executar: npm install && npm run build</p>
                 </div>
@@ -120,7 +120,7 @@ const Help: React.FC = () => {
       </section>
 
       <footer className="text-center pt-10">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">© 2025 Neo & Jammin QA System • monitoria.studio@suporte.com</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">© 2025 Jammin QA System • monitoria.studio@suporte.com</p>
       </footer>
 
       <style>{`

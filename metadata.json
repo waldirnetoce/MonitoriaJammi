@@ -1,5 +1,5 @@
 {
-  "name": "Neo & Jammin QA System",
+  "name": "Jammin QA System",
   "description": "An intelligent quality monitoring agent that analyzes customer service interactions using AI to provide objective scoring, actionable feedback, and performance insights.",
   "requestFramePermissions": [
     "microphone"
