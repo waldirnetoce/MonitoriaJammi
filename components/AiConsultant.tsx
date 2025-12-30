@@ -68,13 +68,20 @@ const AiConsultant: React.FC<AiConsultantProps> = ({ scorecard }) => {
             </div>
           </div>
         ))}
+        {/* IMPROVED NEURAL TYPING INDICATOR */}
         {isLoading && (
-          <div className="flex justify-start animate-pulse">
-            <div className="bg-white dark:bg-white/5 p-4 rounded-full border border-slate-100 dark:border-white/5">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+          <div className="flex justify-start">
+            <div className="bg-white dark:bg-white/5 p-5 rounded-[24px] border border-slate-100 dark:border-white/5 shadow-sm">
+              <div className="flex space-x-1.5 items-center">
+                {[0, 1, 2].map(dot => (
+                  <div 
+                    key={dot} 
+                    className="w-2 h-2 bg-[#2cb638] rounded-full shadow-[0_0_8px_rgba(44,182,56,0.3)]"
+                    style={{ 
+                      animation: `neuralBounce 1.4s infinite ease-in-out both ${dot * 0.16}s` 
+                    }}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -99,6 +106,13 @@ const AiConsultant: React.FC<AiConsultantProps> = ({ scorecard }) => {
           </button>
         </div>
       </form>
+
+      <style>{`
+        @keyframes neuralBounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+          40% { transform: scale(1.1) translateY(-4px); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

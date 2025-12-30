@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { analyzeInteraction, generateAudioPodcastFeedback } from '../services/geminiService';
-import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel, VoiceProfile } from '../types';
+import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel, VoiceProfile, PodcastVoiceStyle } from '../types';
 
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -41,6 +41,13 @@ interface AnalysisToolProps {
 
 const loadingSteps = ["Sincronizando checklists...", "Jammin analisando tom de voz...", "Validando script v1.1.2025...", "Gerando justificativas técnicas..."];
 
+const voiceStyles: { id: PodcastVoiceStyle; label: string; icon: string; desc: string }[] = [
+  { id: 'INSTITUTIONAL', label: 'Corporativo', icon: '👔', desc: 'Narrador Profissional' },
+  { id: 'YOUNG', label: 'Dynamic', icon: '⚡', desc: 'Locutor Jovem e Rápido' },
+  { id: 'HOMER', label: 'Resenha', icon: '🍩', desc: 'Perfil Cômico e Rouco' },
+  { id: 'WOLVERINE', label: 'Garras', icon: '🐺', desc: 'Dublador Grave e Durão' },
+];
+
 const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems, voiceProfile }) => {
   const [transcript, setTranscript] = useState('');
   const [agentName, setAgentName] = useState('');
@@ -55,19 +62,21 @@ const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems
   const [error, setError] = useState<string | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState<PodcastVoiceStyle>('INSTITUTIONAL');
+  const [audioStatus, setAudioStatus] = useState<string>('Aguardando seleção...');
   
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [selectedAudioFile, setSelectedAudioFile] = useState<File | null>(null);
 
   useEffect(() => {
     let interval: number;
-    if (isAnalyzing) {
+    if (isAnalyzing || isGeneratingAudio) {
       interval = window.setInterval(() => {
         setLoadingStepIdx((prev) => (prev + 1) % loadingSteps.length);
-      }, 2000);
+      }, 2500);
     }
     return () => clearInterval(interval);
-  }, [isAnalyzing]);
+  }, [isAnalyzing, isGeneratingAudio]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -107,11 +116,14 @@ const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems
     if (!result) return;
     setIsGeneratingAudio(true);
     setError(null);
+    setAudioStatus("Sincronizando estilo com IA...");
     try {
-      const b64 = await generateAudioPodcastFeedback(result, agentName, monitorName || "Monitor", voiceProfile || undefined);
+      const b64 = await generateAudioPodcastFeedback(result, agentName, monitorName || "Monitor", selectedStyle);
       setAudioBase64(b64);
+      setAudioStatus("Voz aplicada com sucesso!");
     } catch (err: any) {
       setError(`Falha ao gerar podcast: ${err.message}`);
+      setAudioStatus("Falha na geração.");
     } finally {
       setIsGeneratingAudio(false);
     }
@@ -137,24 +149,46 @@ const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems
 
   return (
     <div className="space-y-12 animate-fadeIn pb-24">
+      {/* IMPROVED PREMIUM LOADING OVERLAY */}
       {(isAnalyzing || isGeneratingAudio) && (
-        <div className="fixed inset-0 z-[100] bg-[#042147]/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white">
-          <div className="relative mb-8">
-            <div className="w-24 h-24 border-4 border-[#2cb638] border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl animate-pulse">🎙️</span>
+        <div className="fixed inset-0 z-[100] bg-[#042147]/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white p-10 text-center">
+          <div className="relative mb-12 flex items-center justify-center">
+            <div className="absolute w-40 h-40 rounded-full border border-[#2cb638]/20 animate-ping"></div>
+            <div className="absolute w-32 h-32 rounded-full border-2 border-[#2cb638]/40 animate-pulse"></div>
+            
+            <div className="flex items-end space-x-1.5 h-16 relative z-10">
+              {[...Array(7)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className="w-1.5 bg-[#2cb638] rounded-full shadow-[0_0_10px_rgba(44,182,56,0.5)]" 
+                  style={{ 
+                    height: '20%',
+                    animation: `studioWave 1s ease-in-out infinite alternate ${i * 0.15}s`
+                  }}
+                />
+              ))}
+            </div>
+            
+            <div className="absolute -bottom-6 text-[10px] font-black tracking-[0.4em] text-[#2cb638]/60 uppercase">Studio Engine</div>
+          </div>
+          
+          <div className="space-y-4 max-w-sm">
+            <h4 className="text-sm font-black uppercase tracking-[0.3em] text-[#2cb638] drop-shadow-sm">
+              {isGeneratingAudio ? "Gravando Feedback..." : "Análise em Processamento"}
+            </h4>
+            <div className="h-6 flex items-center justify-center overflow-hidden">
+              <p className="text-[11px] font-bold text-white/50 animate-stepFade tracking-widest uppercase italic">
+                {isGeneratingAudio ? "Aplicando Perfil Sonoro..." : loadingSteps[loadingStepIdx]}
+              </p>
             </div>
           </div>
-          <p className="text-xs font-black uppercase tracking-[0.5em] text-[#2cb638]">
-            {isGeneratingAudio ? "Jammin Studio: Gravando Feedback..." : loadingSteps[loadingStepIdx]}
-          </p>
         </div>
       )}
 
       <div className="bg-white dark:bg-[#1a2333] p-10 rounded-[48px] shadow-2xl border border-slate-100 dark:border-white/5">
         <div className="flex justify-between items-center mb-10">
           <h3 className="text-xl font-black uppercase tracking-tighter text-[#124b94] dark:text-[#2cb638]">Nova Auditoria Jammin</h3>
-          <button onClick={() => { setResult(null); setTranscript(''); setAudioBase64(null); }} className="text-[10px] font-black uppercase text-rose-500 tracking-widest">Resetar</button>
+          <button onClick={() => { setResult(null); setTranscript(''); setAudioBase64(null); setAudioStatus('Aguardando seleção...'); }} className="text-[10px] font-black uppercase text-rose-500 tracking-widest">Resetar</button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -203,25 +237,49 @@ const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems
               <h4 className="text-[140px] font-black leading-none tracking-tighter">{result.totalScore}</h4>
             </div>
             
-            <div className="bg-gradient-to-br from-[#124b94] to-[#042147] p-12 rounded-[56px] text-white flex flex-col items-center justify-center shadow-2xl border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#71c8ff] mb-8">Deep Dive Podcast</span>
+            <div className="bg-gradient-to-br from-[#124b94] to-[#042147] p-10 rounded-[56px] text-white flex flex-col items-center justify-center shadow-2xl border border-white/10">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#71c8ff] mb-6">Deep Dive Podcast</span>
+              
+              {/* VOICE STYLE SELECTION */}
+              <div className="grid grid-cols-2 gap-3 mb-8 w-full max-w-xs">
+                {voiceStyles.map((style) => (
+                  <button
+                    key={style.id}
+                    onClick={() => { setSelectedStyle(style.id); setAudioStatus(`Estilo ${style.label} selecionado.`); }}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center text-center ${
+                      selectedStyle === style.id 
+                      ? 'bg-white text-[#124b94] border-white scale-105 shadow-xl' 
+                      : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="text-xl mb-1">{style.icon}</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider">{style.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="text-center mb-6">
+                <p className={`text-[10px] font-bold tracking-widest uppercase transition-all ${audioBase64 ? 'text-[#2cb638]' : 'text-white/40'}`}>
+                  {audioStatus}
+                </p>
+              </div>
+
               {!audioBase64 ? (
                 <button 
                   onClick={handleGeneratePodcast} 
                   disabled={isGeneratingAudio}
-                  className="bg-white text-[#124b94] px-10 py-5 rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-transform disabled:opacity-50"
+                  className="bg-white text-[#124b94] px-10 py-5 rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-transform disabled:opacity-50 shadow-xl"
                 >
-                  {isGeneratingAudio ? "Gravando..." : "Gerar Feedback em Áudio"}
+                  {isGeneratingAudio ? "Gravando..." : "Gerar Áudio Podcast"}
                 </button>
               ) : (
                 <div className="flex flex-col items-center">
                   <button onClick={playPodcast} className={`w-24 h-24 rounded-full flex items-center justify-center bg-[#2cb638] text-white text-4xl shadow-2xl transition-all ${isPlaying ? 'animate-pulse scale-110' : 'hover:scale-110'}`}>
                     {isPlaying ? '📻' : '▶️'}
                   </button>
-                  <p className="mt-4 text-[9px] font-black uppercase text-white/60 tracking-widest">Feedback Disponível</p>
+                  <p className="mt-4 text-[9px] font-black uppercase text-white/60 tracking-widest">Jammin Studio: Podcast Pronto</p>
                 </div>
               )}
-              {voiceProfile && <p className="mt-6 text-[8px] font-black uppercase text-white/40 tracking-[0.2em] max-w-xs text-center">Clonagem de Tom: {voiceProfile.tonalityDescription}</p>}
             </div>
           </div>
 
@@ -274,6 +332,20 @@ const AnalysisTool: React.FC<AnalysisToolProps> = ({ onSave, scorecard, ncgItems
           </div>
         </div>
       )}
+
+      {/* Loading Animations Keyframes */}
+      <style>{`
+        @keyframes studioWave {
+          0% { height: 20%; }
+          100% { height: 100%; }
+        }
+        @keyframes stepFade {
+          0% { opacity: 0; transform: translateY(10px); }
+          15% { opacity: 1; transform: translateY(0); }
+          85% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-10px); }
+        }
+      `}</style>
     </div>
   );
 };

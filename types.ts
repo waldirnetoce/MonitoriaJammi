@@ -46,7 +46,10 @@ export interface Interaction {
   result?: AnalysisResult;
 }
 
+export type PodcastVoiceStyle = 'HOMER' | 'WOLVERINE' | 'INSTITUTIONAL' | 'YOUNG';
+
 export interface VoiceProfile {
   voiceName: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr';
   tonalityDescription: string;
+  selectedStyle?: PodcastVoiceStyle;
 }

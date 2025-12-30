@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel, VoiceProfile } from "../types";
+import { AnalysisResult, ScorecardCriterion, NcgItem, RigorLevel, VoiceProfile, PodcastVoiceStyle } from "../types";
 
 export const askAiQuestion = async (question: string, scorecard: ScorecardCriterion[]): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -146,18 +146,36 @@ export const generateAudioPodcastFeedback = async (
   result: AnalysisResult, 
   agentName: string, 
   monitorName: string,
-  voiceProfile?: VoiceProfile
+  voiceStyle: PodcastVoiceStyle = 'INSTITUTIONAL'
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const voice = voiceProfile?.voiceName || 'Zephyr';
-  const tonality = voiceProfile?.tonalityDescription || 'Profissional e direto';
+  // Mapping styles to Gemini prebuilt voices and acting prompts
+  const styleConfig: Record<PodcastVoiceStyle, { voice: string, acting: string }> = {
+    HOMER: { 
+      voice: 'Charon', 
+      acting: 'Dê um tom cômico, levemente preguiçoso, rouco e bem-humorado, como um personagem clássico de desenho animado.' 
+    },
+    WOLVERINE: { 
+      voice: 'Fenrir', 
+      acting: 'Dê um tom ríspido, grave, heróico, direto e um pouco selvagem, como um herói de ação durão.' 
+    },
+    INSTITUTIONAL: { 
+      voice: 'Zephyr', 
+      acting: 'Dê um tom formal, executivo, profissional, equilibrado e corporativo.' 
+    },
+    YOUNG: { 
+      voice: 'Puck', 
+      acting: 'Dê um tom entusiasmado, rápido, moderno, dinâmico e jovem.' 
+    }
+  };
 
-  // Improved prompt to handle Portuguese grammar (gender articles) correctly
+  const config = styleConfig[voiceStyle];
+
   const prompt = `Gere o texto de locução em áudio seguindo estas instruções rigorosas:
 1. Você é o(a) monitor(a) ${monitorName}.
-2. Use os artigos definidos corretos em português (o/a) de acordo com o gênero do nome ${monitorName}. Se for Francisca, diga 'aqui é A Francisca'. Se for Waldir, diga 'aqui é O Waldir'.
-3. O tom de voz deve ser: ${tonality}.
+2. Use os artigos definidos corretos em português (o/a) de acordo com o gênero do nome ${monitorName}. Se for Francisca, diga 'aqui é A Francisca'.
+3. Estilo de interpretação: ${config.acting}.
 4. Script: 'Fala pessoal, aqui é ${monitorName}! Acabei de analisar o atendimento do agente ${agentName}. O score final foi de ${result.totalScore} pontos. O principal ponto de melhoria ou destaque é: ${result.operatorFeedback}. É isso aí, vamos focar nos detalhes para a próxima. Valeu!'`;
 
   const response = await ai.models.generateContent({
@@ -167,7 +185,7 @@ export const generateAudioPodcastFeedback = async (
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voice }
+          prebuiltVoiceConfig: { voiceName: config.voice }
         },
       },
     },
